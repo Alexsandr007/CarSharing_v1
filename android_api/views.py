@@ -11,7 +11,7 @@ from rest_framework.generics import ListAPIView
 from android_api.models import TimeStampSetting, Device, AppTypes, OkoDriveStatuses, \
     ActivityTypes, ConfirmationTelegram
 from android_api.serializers import TimeStampSettingSerializer, DeviceSerializer, RegisterDriverSerializer, \
-    CheckTelegramAuthSerializer, TelegramConfirmationViewSerializer
+    CheckTelegramAuthSerializer, TelegramConfirmationViewSerializer, TelegramUntieViewSerializer
 from android_api.services.get_okodrive_status import get_okodrive_status
 from android_api.services.unix_format_converter import unix_converter
 
@@ -90,16 +90,13 @@ class TelegramConfirmationView(APIView):
         serializer = TelegramConfirmationViewSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                print("1")
                 obj = ConfirmationTelegram.objects.get(device_id=serializer.validated_data['device_id'])
-                print("2")
                 obj.is_telegram_activated = True
                 device = Device.objects.get(device_id=serializer.validated_data['device_id'])
-                print("3")
                 device.is_telegram_activated = True
-                serializer.validated_data['device_id']
+                obj.save()
+                device.save()
                 if obj.is_telegram_activated:
-                    print("4")
                     return Response({
                         "status": True,
                         "message": "Телеграмм привязан к устройству"
@@ -171,5 +168,37 @@ class DeviceViewSet(ModelViewSet):
                 location=f"{serializer.validated_data['longitude']}, {serializer.validated_data['latitude']}",
                 yandex_link=f"https://yandex.ru/maps/?pt="
                             f"{serializer.validated_data['longitude']},{serializer.validated_data['latitude']}&z=18&l=map"),
+
+
+
+class TelegramUntieView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Returns information about whether the specified device is tethered to a telegram account",
+        request_body=TelegramUntieViewSerializer,
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = TelegramUntieViewSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                obj = Device.objects.get(device_id=serializer.validated_data['device_id'])
+                if not obj.is_telegram_activated:
+                    return Response({
+                        "status": True,
+                        "message": "Телеграмм не был привязан"
+                    }, status=status.HTTP_200_OK)
+                obj.is_telegram_activated = False
+                obj.save()
+                return Response({
+                    "status": False,
+                    "message": "Телеграмм отвязан от устройства"
+                }, status=status.HTTP_200_OK)
+            except:
+                return Response({
+                    "status": False,
+                    "error_text": "Данного устройства не существует"
+                }, status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 

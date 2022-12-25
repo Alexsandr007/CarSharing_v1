@@ -4,6 +4,10 @@ from rest_framework import serializers
 from android_api.models import TimeStampSetting, Device
 
 
+class TelegramUntieViewSerializer(serializers.Serializer):
+    device_id = serializers.IntegerField(required=True)
+
+
 class RegisterDriverSerializer(serializers.Serializer):
     device_id = serializers.IntegerField(required=True)
     driver_id = serializers.CharField(required=True)
