@@ -1,0 +1,14 @@
+Пароль от юзера на сервере: фвьшт
+Логин от юзера на сервере: carsharinguser
+Как найти приложение:
+su -l carsharinguser
+cd /var/www/CarSharing
+
+
+
+
+
+Админка Django:
+
+carsharing - логин
+12345678 - пароль
