@@ -37,8 +37,6 @@ def is_equal_speed_interval(current_speed, previous_speed, intervals):
 
 
 def get_oko_drive_statuses(model, activity_type):
-    print("tipe"+str(activity_type))
-    print(model)
     oko_drive_statuses = (
         model.objects
         .values_list(
@@ -50,15 +48,18 @@ def get_oko_drive_statuses(model, activity_type):
         .filter(activity_type=activity_type)
         .first()
     )
+    print(model)
     print(oko_drive_statuses)
     return list(oko_drive_statuses)
 
 
 def get_okodrive_status(activity_type: str, speed: float, **kwargs) -> str:
-    intervals = make_intervals()
-    print(kwargs)
-    status_index = get_index(intervals, speed)
     print(activity_type)
+    print(speed)
+    print(kwargs.get('device_id'))
+    intervals = make_intervals()
+    status_index = get_index(intervals, speed)
+    print(status_index)
     models_oko_drive_settings_by_type = {
         'IN_VEHICLE': InVehicleOkoDriveSettings,
         'STILL': StillOkoDriveSettings,
@@ -71,14 +72,15 @@ def get_okodrive_status(activity_type: str, speed: float, **kwargs) -> str:
     }
 
     model_oko_drive_settings = models_oko_drive_settings_by_type.get(activity_type)
-    print(model_oko_drive_settings)
     if not model_oko_drive_settings:
         print(1)
+        print(model_oko_drive_settings)
         base_oko_drive_statuses = get_oko_drive_statuses(BaseOkoDriveSettings, activity_type)
         return base_oko_drive_statuses[status_index]
 
     if not kwargs.get('device_id'):
         print(2)
+        print(model_oko_drive_settings)
         oko_drive_statuses = get_oko_drive_statuses(model_oko_drive_settings, ActivityTypes.NONE)
         return oko_drive_statuses[status_index]
 

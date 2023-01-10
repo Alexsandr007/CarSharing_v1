@@ -9,13 +9,9 @@ router.register('telemetry', DeviceViewSet, basename='telemetry')
 
 urlpatterns = [
     path('get_settings/', TimeStampSettingView.as_view(), name='get_settings'),
-    # Регистрация пользователя
     path('reg_driver/', RegisterDriverView.as_view(), name='reg_driver'),
-    # Проверка регистрации
     path('reg_check/<int:device_id>/', CheckTelegramAuthView.as_view(), name='reg_check'),
-    # Подтверждение телеграмма
     path('reg_confirmation/', TelegramConfirmationView.as_view(), name='reg_confirmation'),
-    # Отвязка тг
     path('untie_telegram/', TelegramUntieView.as_view(), name='untie_telegram')
 ]
 

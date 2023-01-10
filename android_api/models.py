@@ -38,7 +38,7 @@ class ActivityTypes(models.TextChoices):
 
 
 class Device(models.Model):
-    device_id = models.AutoField(primary_key=True)
+    device_id = models.IntegerField()
     driver_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     is_telegram_activated = models.BooleanField(default=False)
     longitude = models.FloatField()
@@ -84,7 +84,7 @@ class Device(models.Model):
 
 class DeviceHistory(models.Model):
     device_id = models.IntegerField(verbose_name='Device id')
-    driver_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
+    driver_id = models.CharField(max_length=40, null=True, blank=True)
     is_telegram_activated = models.BooleanField(default=False)
     longitude = models.FloatField(verbose_name='Longitude')
     latitude = models.FloatField(verbose_name='Latitude')
@@ -135,9 +135,7 @@ class DeviceHistory(models.Model):
         return (last_edited_time - datetime.timedelta(hours=utc_num)).strftime('%Y-%m-%d %H:%M:%S') if utc_sign == '-' \
             else (last_edited_time + datetime.timedelta(hours=utc_num)).strftime('%Y-%m-%d %H:%M:%S')
 
-# /////////////////////////////////////////////////////////////////////////
-# /////////////////////////////////////////////////////////////////////////
-# /////////////////////////////////////////////////////////////////////////
+
 class ConfirmationTelegram(models.Model):
     device_id = models.IntegerField(verbose_name='Device id')
     is_telegram_activated = models.BooleanField(default=False)
@@ -209,6 +207,7 @@ class BaseOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (Базовые типы)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (Базовые типы)'
+        ordering =['-activity_type']
 
 
 class InVehicleOkoDriveSettings(models.Model):
@@ -228,6 +227,7 @@ class InVehicleOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (IN_VEHICLE)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (IN_VEHICLE)'
+        ordering =['-activity_type']
 
 
 class OnBicycleOkoDriveSettings(models.Model):
@@ -247,6 +247,7 @@ class OnBicycleOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (ON_BICYCLE)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (ON_BICYCLE)'
+        ordering =['-activity_type']
 
 
 class OnFootOkoDriveSettings(models.Model):
@@ -266,6 +267,7 @@ class OnFootOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (ON_FOOT)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (ON_FOOT)'
+        ordering =['-activity_type']
 
 
 class WalkingOkoDriveSettings(models.Model):
@@ -285,6 +287,7 @@ class WalkingOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (WALKING)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (WALKING)'
+        ordering =['-activity_type']
 
 
 class RunningOkoDriveSettings(models.Model):
@@ -304,6 +307,7 @@ class RunningOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (RUNNING)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (RUNNING)'
+        ordering =['-activity_type']
 
 
 class TiltingOkoDriveSettings(models.Model):
@@ -323,6 +327,7 @@ class TiltingOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (TILTING)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (TILTING)'
+        ordering =['-activity_type']
 
 
 class UnknownOkoDriveSettings(models.Model):
@@ -342,6 +347,7 @@ class UnknownOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (UNKNOWN)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (UNKNOWN)'
+        ordering =['-activity_type']
 
 
 class StillOkoDriveSettings(models.Model):
@@ -361,6 +367,7 @@ class StillOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (STILL)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (STILL)'
+        ordering =['-activity_type']
 
 
 class SpeedIntervalSettings(models.Model):
