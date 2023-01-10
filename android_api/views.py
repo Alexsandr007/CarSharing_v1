@@ -112,19 +112,12 @@ class TelegramConfirmationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# @method_decorator(name='list', decorator=swagger_auto_schema(
-#     operation_description="The request used by the mobile application to get the intervals at which the telemetry "
-#                               "is updated, under the 'put' request to the telemetry",
-# ))
 class TimeStampSettingView(ListAPIView):
     serializer_class = TimeStampSettingSerializer
     queryset = TimeStampSetting.objects.all()
     permission_classes = [AllowAny]
 
-# @method_decorator(name='perform_create', decorator=swagger_auto_schema(
-#     operation_description="A request to record the device's primary telemetry and assign a unique device_id to it,"
-#                           " as well as to determine its Oko_drive status.",
-# ))
+
 class DeviceViewSet(ModelViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
@@ -155,10 +148,11 @@ class DeviceViewSet(ModelViewSet):
                         f"{serializer.validated_data['longitude']},{serializer.validated_data['latitude']}&z=18&l=map"
         )
 
-    # @method_decorator(name='perform_update', decorator=swagger_auto_schema(
-    #     operation_description="A request to re-record device telemetry changes to the DeviceHistory"
-    #                           " table and also to determine its Oko_drive status at the current moment.",
-    # ))
+    def list(self, request):
+        queryset = Device.objects.exclude(driver_id='').filter(driver_id__isnull=False)
+        serializer = DeviceSerializer(queryset, many=True)
+        return Response(serializer.data)
+
     def perform_update(self, serializer):
         if serializer.validated_data['is_stopped'] is True:
             okodrive_status = OkoDriveStatuses.ignore
