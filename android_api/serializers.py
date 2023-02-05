@@ -1,35 +1,47 @@
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from android_api.models import TimeStampSetting, Device
+from android_api.models import TimeStampSetting, Device, Bearing, Speed, XY, AllActivityMetrics
 
 
-class TelegramUntieViewSerializer(serializers.Serializer):
-    device_id = serializers.IntegerField(required=True)
+class BearingSerializer(serializers.Serializer):
+    value = serializers.FloatField()
+    accuracy = serializers.FloatField()
 
 
-class RegisterDriverSerializer(serializers.Serializer):
-    device_id = serializers.IntegerField(required=True)
-    driver_id = serializers.CharField(required=True)
+class SpeedSerializer(serializers.Serializer):
+    value = serializers.FloatField()
+    accuracy = serializers.FloatField()
 
 
-class CheckTelegramAuthSerializer(serializers.Serializer):
-    device_id = serializers.IntegerField(required=True)
+class XYSerializer(serializers.Serializer):
+    latitude = serializers.FloatField()
+    longitude = serializers.FloatField()
+    accuracy = serializers.FloatField()
 
 
-class TelegramConfirmationViewSerializer(serializers.Serializer):
-    device_id = serializers.IntegerField(required=True)
-    is_telegram_activated = serializers.BooleanField(read_only=True)
+class AllActivityMetricsSerializer(serializers.Serializer):
+    activity = serializers.CharField(max_length=25)
+    confidence = serializers.IntegerField()
+
+
+class DataSerializer(serializers.Serializer):
+    bearing = BearingSerializer()
+    speed = SpeedSerializer()
+    xy = XYSerializer()
+    time = serializers.DateTimeField()
+    activity = serializers.CharField(max_length=25)
+    all_activity_metrics = AllActivityMetricsSerializer(many=True)
 
 
 class DeviceSerializer(serializers.ModelSerializer):
-    okodrive_status = serializers.CharField(read_only=True)
-    is_telegram_activated = serializers.BooleanField(read_only=True)
-    driver_id = serializers.IntegerField(read_only=True)
+    device_id = serializers.IntegerField()
+    data = DataSerializer()
 
     class Meta:
         model = Device
-        exclude = ('created_at', 'updated_at')
+        fields = '__all__'
+        depth = 2
 
 
 class TimeStampSettingSerializer(serializers.ModelSerializer):

@@ -10,112 +10,12 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.generics import ListAPIView
 
 from android_api.models import TimeStampSetting, Device, AppTypes, OkoDriveStatuses, \
-    ActivityTypes, ConfirmationTelegram
-from android_api.serializers import TimeStampSettingSerializer, DeviceSerializer, RegisterDriverSerializer, \
-    CheckTelegramAuthSerializer, TelegramConfirmationViewSerializer, TelegramUntieViewSerializer
+    ActivityTypes
+from android_api.serializers import DeviceSerializer, DataSerializer, AllActivityMetricsSerializer, XYSerializer, SpeedSerializer, \
+    BearingSerializer
 from android_api.services.get_okodrive_status import get_okodrive_status
 from android_api.services.unix_format_converter import unix_converter
 from android_api.services.generate_device_id import gen_smth
-
-
-class RegisterDriverView(APIView):
-
-    @swagger_auto_schema(
-        operation_description="A request for registering a driver in the bot and assigning him a driver_id, as well as "
-                              "creating an application for telegram confirmation from the application.",
-        request_body=RegisterDriverSerializer,
-    )
-    def post(self, request, *args, **kwargs):
-        serializer = RegisterDriverSerializer(data=request.data)
-        if serializer.is_valid():
-            if not Device.objects.filter(device_id=serializer.validated_data['device_id']).exists():
-                return Response({
-                    "status": False,
-                    "error_text": 'Такого девайса не существует'
-                }, status=status.HTTP_200_OK)
-            if Device.objects.filter(driver_id=serializer.validated_data['driver_id']).exists():
-                return Response({
-                    "status": False,
-                    "error_text": 'Телеграмм привязан к устройству: {0}'.format(serializer.validated_data['device_id'])
-                })
-
-
-            obj = Device.objects.get(device_id=serializer.validated_data['device_id'])
-            # obj.is_telegram_activated = True
-            # request_telegram = ConfirmationTelegram.objects.create(device_id=serializer.validated_data['device_id'],is_telegram_activated=False)
-            obj.driver_id = serializer.validated_data['driver_id']
-            # request_telegram.save()
-            obj.save()
-
-            return Response({
-                "status": True,
-                "message": 'Авторизация пользователя прошла успешно'
-            }, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class CheckTelegramAuthView(APIView):
-
-    @swagger_auto_schema(
-        operation_description="Returns information about whether the specified device is linked to a Telegram account. Used by the 1c server",
-        responses={
-            204: "Данного устройства не существует",
-            200: ''
-        }
-    )
-    def get(self, request, *args, **kwargs):
-        try:
-            obj = Device.objects.get(device_id=kwargs['device_id'])
-            if obj.is_telegram_activated:
-                return Response({
-                    "status": True,
-                    "message": "Телеграмм привязан к устройству"
-                }, status=status.HTTP_200_OK)
-            return Response({
-                "status": False,
-                "message": "Телеграмм не привязан к устройству"
-            }, status=status.HTTP_200_OK)
-        except:
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class TelegramConfirmationView(APIView):
-
-    @swagger_auto_schema(
-        operation_description="The request used to confirm the telegram binding application from the application.",
-        request_body=TelegramConfirmationViewSerializer,
-    )
-    def post(self, request, *args, **kwargs):
-        serializer = TelegramConfirmationViewSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                # obj = ConfirmationTelegram.objects.get(device_id=serializer.validated_data['device_id'], is_telegram_activated=False)
-                # obj.is_telegram_activated = True
-                device = Device.objects.get(device_id=serializer.validated_data['device_id'])
-                device.is_telegram_activated = True
-                # if obj.is_telegram_activated:
-                if device.is_telegram_activated:
-                    # obj.save()
-                    device.save()
-                    return Response({
-                        "status": True,
-                        "message": 'Телеграмм привязан'
-                    }, status=status.HTTP_200_OK)
-                # obj.save()
-                device.save()
-                return Response({
-                    "status": False,
-                    "message": "Телеграмм не привязан к устройству"
-                }, status=status.HTTP_200_OK)
-            except:
-                return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class TimeStampSettingView(ListAPIView):
-    serializer_class = TimeStampSettingSerializer
-    queryset = TimeStampSetting.objects.all()
-    permission_classes = [AllowAny]
 
 
 class DeviceViewSet(ModelViewSet):
@@ -123,84 +23,77 @@ class DeviceViewSet(ModelViewSet):
     serializer_class = DeviceSerializer
     permission_classes = [AllowAny]
 
-
     def perform_create(self, serializer):
-        if serializer.validated_data['is_stopped'] is True:
-            okodrive_status = OkoDriveStatuses.ignore
-        elif serializer.validated_data['app_type'] == AppTypes.mirror:
-            okodrive_status = OkoDriveStatuses.in_car
-        else:
-            okodrive_status = get_okodrive_status(
-                serializer.validated_data['activity_type'],
-                serializer.validated_data['speed']
-            )
-        speed_kph = serializer.validated_data['speed']
+        okodrive_status = get_okodrive_status(
+                    serializer.validated_data['data']['activity'],
+                    serializer.validated_data['data']['speed']['value'],
+                    device_id=self.get_object().device_id,
+                    activity=serializer.validated_data['data']['activity'],
+                    speed=serializer.validated_data['data']['speed']['value']
+                )
         unix_timestamp = int(time.time())
         generate_id = gen_smth(3)
-        serializer.save(
-            device_id=generate_id,
-            location=f"{serializer.validated_data['longitude']}, {serializer.validated_data['latitude']}",
-            okodrive_status=okodrive_status,
-            speed=speed_kph,
-            last_message_timestamp_utc=unix_timestamp,
-            last_message_timestamp_txt_utc=unix_converter(unix_timestamp),
-            yandex_link=f"https://yandex.ru/maps/?pt="
-                        f"{serializer.validated_data['longitude']},{serializer.validated_data['latitude']}&z=18&l=map"
-        )
-
-    def list(self, request):
-        queryset = Device.objects.exclude(driver_id='').filter(driver_id__isnull=False)
-        serializer = DeviceSerializer(queryset, many=True)
-        return Response(serializer.data)
+        json_array = []
+        for i in serializer.validated_data['data']['all_activity_metrics']:
+            json_array.append({'activity': i['activity'], 'confidence': i['confidence']})
+        if serializer.validated_data['data']['xy']['longitude'] and serializer.validated_data['data']['xy']['latitude']:
+            serializer.save(
+                data={
+                    'device_id': generate_id,
+                    'data': {
+                        'bearing': {
+                            'value': serializer.validated_data['data']['bearing']['value'],
+                            'accuracy': serializer.validated_data['data']['bearing']['accuracy']
+                        },
+                        'speed': {
+                            'value': serializer.validated_data['data']['speed']['value'],
+                            'accuracy': serializer.validated_data['data']['speed']['accuracy']
+                        },
+                        'xy': {
+                            'latitude': serializer.validated_data['data']['xy']['latitude'],
+                            'longitude': serializer.validated_data['data']['xy']['longitude'],
+                            'accuracy': serializer.validated_data['data']['xy']['accuracy']
+                        },
+                        'time': unix_timestamp,
+                        'activity': okodrive_status,
+                        'all_activity_metrics': json_array
+                    }
+                }
+            )
 
     def perform_update(self, serializer):
-        if serializer.validated_data['is_stopped'] is True:
-            okodrive_status = OkoDriveStatuses.ignore
-        elif serializer.validated_data['app_type'] == AppTypes.mirror:
-            okodrive_status = OkoDriveStatuses.in_car
-        else:
-            print(serializer)
-            okodrive_status = get_okodrive_status(
-                serializer.validated_data['activity_type'],
-                serializer.validated_data['speed'],
-                device_id=self.get_object().device_id
-            )
-        speed_kph = serializer.validated_data['speed']
+        okodrive_status = get_okodrive_status(
+            serializer.validated_data['data']['activity'],
+            serializer.validated_data['data']['speed']['value'],
+            device_id=self.get_object().device_id,
+            activity=serializer.validated_data['data']['activity'],
+            speed=serializer.validated_data['data']['speed']['value']
+        )
         unix_timestamp = int(time.time())
-        if serializer.validated_data['longitude'] and serializer.validated_data['latitude']:
+        json_array = []
+        for i in serializer.validated_data['data']['all_activity_metrics']:
+            json_array.append({'activity': i['activity'], 'confidence': i['confidence']})
+        if serializer.validated_data['data']['xy']['longitude'] and serializer.validated_data['data']['xy']['latitude']:
             serializer.save(
-                device_id = serializer.validated_data['device_id'],
-                last_message_timestamp_txt_utc=unix_converter(unix_timestamp),
-                last_message_timestamp_utc=unix_timestamp,
-                okodrive_status=okodrive_status,
-                speed=speed_kph,
-                location=f"{serializer.validated_data['longitude']}, {serializer.validated_data['latitude']}",
-                yandex_link=f"https://yandex.ru/maps/?pt="
-                            f"{serializer.validated_data['longitude']},{serializer.validated_data['latitude']}&z=18&l=map"),
-
-
-class TelegramUntieView(APIView):
-
-    @swagger_auto_schema(
-        operation_description="Request to unlink account telegrams from the device",
-        request_body=TelegramUntieViewSerializer,
-    )
-    def post(self, request, *args, **kwargs):
-        serializer = TelegramUntieViewSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                obj = Device.objects.get(device_id=serializer.validated_data['device_id'])
-                if not obj.is_telegram_activated:
-                    return Response({
-                        "status": True,
-                        "message": "Телеграмм не был привязан"
-                    }, status=status.HTTP_200_OK)
-                obj.is_telegram_activated = False
-                obj.save()
-                return Response({
-                    "status": False,
-                    "message": "Телеграмм отвязан от устройства"
-                }, status=status.HTTP_200_OK)
-            except:
-                return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                data={
+                    'device_id': serializer.validated_data['device_id'],
+                    'data': {
+                        'bearing': {
+                            'value': serializer.validated_data['data']['bearing']['value'],
+                            'accuracy': serializer.validated_data['data']['bearing']['accuracy']
+                        },
+                        'speed': {
+                            'value': serializer.validated_data['data']['speed']['value'],
+                            'accuracy': serializer.validated_data['data']['speed']['accuracy']
+                        },
+                        'xy': {
+                            'latitude': serializer.validated_data['data']['xy']['latitude'],
+                            'longitude': serializer.validated_data['data']['xy']['longitude'],
+                            'accuracy': serializer.validated_data['data']['xy']['accuracy']
+                        },
+                        'time': unix_timestamp,
+                        'activity': okodrive_status,
+                        'all_activity_metrics': json_array
+                    }
+                }
+            )

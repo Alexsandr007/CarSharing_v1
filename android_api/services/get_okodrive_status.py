@@ -1,7 +1,7 @@
-from android_api.models import ActivityTypes, OkoDriveStatuses, DeviceHistory, BaseOkoDriveSettings, \
+from android_api.models import ActivityTypes, OkoDriveStatuses, BaseOkoDriveSettings, \
     SpeedIntervalSettings, InVehicleOkoDriveSettings, StillOkoDriveSettings, UnknownOkoDriveSettings, \
     OnBicycleOkoDriveSettings, OnFootOkoDriveSettings, WalkingOkoDriveSettings, RunningOkoDriveSettings, \
-    TiltingOkoDriveSettings
+    TiltingOkoDriveSettings, Device
 
 
 def make_intervals() -> list:
@@ -84,34 +84,22 @@ def get_okodrive_status(activity_type: str, speed: float, **kwargs) -> str:
         oko_drive_statuses = get_oko_drive_statuses(model_oko_drive_settings, ActivityTypes.NONE)
         return oko_drive_statuses[status_index]
 
-    past_device_update = DeviceHistory.objects.filter(device_id=kwargs.get('device_id')).first()
+    past_device_update = Device.objects.filter(device_id=kwargs.get('device_id')).first()
     if not past_device_update:
         print(3)
         return OkoDriveStatuses.error
 
-    past_device_activity_type = past_device_update.activity_type
+    past_device_activity_type = past_device_update.data.activity
     if past_device_activity_type == activity_type and model_oko_drive_settings == StillOkoDriveSettings:
         print(4)
-        last_device_history_of_first_interval = DeviceHistory.objects.filter(
+        last_device_history_of_first_interval = Device.objects.filter(
             device_id=kwargs.get('device_id'),
             speed=0
         ).first()
         if last_device_history_of_first_interval and speed == 0:
-            return last_device_history_of_first_interval.okodrive_status
+            return last_device_history_of_first_interval.data.activity
         else:
             return OkoDriveStatuses.ignore
-    """if past_device_activity_type == activity_type and activity_type != ActivityTypes.UNKNOWN:
-        if is_equal_speed_interval(speed, past_device_update.speed, intervals):
-            return past_device_update.okodrive_status
-        else:
-            second_device_update = DeviceHistory.objects.filter(device_id=kwargs['device_id']).exclude(
-                pk=past_device_update.pk).first()
-            if second_device_update and is_equal_speed_interval(speed, second_device_update.speed, intervals):
-                return second_device_update.okodrive_status
-
-        return OkoDriveStatuses.error
-    else:"""
-
     oko_drive_statuses = get_oko_drive_statuses(model_oko_drive_settings, past_device_activity_type)
     return oko_drive_statuses[status_index]
 

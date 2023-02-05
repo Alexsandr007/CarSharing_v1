@@ -8,115 +8,25 @@ from django.utils.safestring import mark_safe
 
 from rangefilter.filters import DateRangeFilter, DateTimeRangeFilter, NumericRangeFilter
 
-from android_api.models import Device, TimeStampSetting, DeviceHistory, BaseOkoDriveSettings, InVehicleOkoDriveSettings, \
+from android_api.models import Device, TimeStampSetting, BaseOkoDriveSettings, InVehicleOkoDriveSettings, \
     UnknownOkoDriveSettings, StillOkoDriveSettings, SpeedIntervalSettings, CurrentUTCTime, OnBicycleOkoDriveSettings, \
-    OnFootOkoDriveSettings, WalkingOkoDriveSettings, RunningOkoDriveSettings, TiltingOkoDriveSettings, ConfirmationTelegram
+    OnFootOkoDriveSettings, WalkingOkoDriveSettings, RunningOkoDriveSettings, TiltingOkoDriveSettings, Data, AllActivityMetrics, \
+    Bearing, Speed, XY
 from simple_history.admin import SimpleHistoryAdmin
 
 
-class WebsiteHistoryAdmin(SimpleHistoryAdmin):
-    history_list_display = [
-        'yandex_location_url',
-        'longitude',
-        'latitude',
-        'activity_type',
-        'speed',
-    ]
-    list_filter = ('created_at', 'updated_at')
-    list_display = ['device_id', '__str__', 'updated_at']
-    search_fields = ['created_at', 'updated_at']
-    list_per_page = 500
-
-    def yandex_location_url(self, obj):
-        return format_html("<a href='{url}'>{url}</a>", url=obj.yandex_link)
-    yandex_location_url.allow_tags = True
-
-
-admin.site.register(Device, WebsiteHistoryAdmin)
-
-
-
-
-@admin.register(DeviceHistory)
-class DeviceHistoryAdmin(admin.ModelAdmin):
-    list_display = [
-        'device_id',
-        'driver_id',
-        'is_telegram_activated',
-        'last_edited_custom_utc',
-        'yandex_location',
-        'longitude',
-        'latitude',
-        'is_stopped',
-        'app_type',
-        'activity_type',
-        'okodrive_status',
-        'device_speed',
-        'error_name',
-        'satellites',
-        'accuracy',
-        'bearing',
-        'device_altitude',
-        'acceleration_x',
-        'acceleration_y',
-        'acceleration_z',
-        'charging',
-        'battery_percent',
-        'network_type',
-    ]
-    list_filter = (
-        ('created_at', DateTimeRangeFilter),
-        'app_type',
-        'is_telegram_activated',
-        'activity_type',
-        'okodrive_status',
-        'error_name',
-        ('longitude', NumericRangeFilter),
-        ('latitude', NumericRangeFilter),
-        ('speed', NumericRangeFilter),
-        ('satellites', NumericRangeFilter),
-        ('accuracy', NumericRangeFilter),
-        ('bearing', NumericRangeFilter),
-        ('altitude', NumericRangeFilter),
-        ('last_message_timestamp_txt_utc', NumericRangeFilter),
-        ('battery_percent', NumericRangeFilter),
-        ('acceleration_x', NumericRangeFilter),
-        ('acceleration_y', NumericRangeFilter),
-        ('acceleration_z', NumericRangeFilter)
-    )
-    search_fields = ['device_id', 'activity_type', 'network_type', 'charging']
-    list_per_page = 500
-
-    def yandex_location(self, obj):
-        return format_html("<a href='{url}'>{url}</a>", url=obj.yandex_link)
-    yandex_location.allow_tags = True
-
-    def device_speed(self, obj):
-        return round(obj.speed, 1)
-
-    def device_altitude(self, obj):
-        return round(obj.altitude, 1)
-
-    def last_message(self, obj):
-        return obj.last_message_timestamp_txt_utc
-
-    def last_edited_time_txt_utc(self, obj):
-        return obj.created_at.strftime('%Y-%m-%d %H:%M:%S')
-
-    def last_edited_custom_utc(self, obj):
-        return obj.last_edited_custom_utc()
+admin.site.register(Device)
+admin.site.register(XY)
+admin.site.register(Speed)
+admin.site.register(Bearing)
+admin.site.register(Data)
+admin.site.register(AllActivityMetrics)
 
 
 @admin.register(TimeStampSetting)
 class TimeStampSettingAdmin(admin.ModelAdmin):
     ...
 
-@admin.register(ConfirmationTelegram)
-class ConfirmationTelegramAdmin(admin.ModelAdmin):
-    list_display = [
-        'device_id',
-        'is_telegram_activated',
-    ]
 
 @admin.register(BaseOkoDriveSettings)
 class BaseOkoDriveSettingsAdmin(admin.ModelAdmin):

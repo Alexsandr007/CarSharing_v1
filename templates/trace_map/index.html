@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+{% load static %}
+
+<head>
+    <title>Map</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="/static/admin/css/base.css">
+    <link rel="stylesheet" type="text/css" href="/static/admin/css/forms.css">
+    <link rel="stylesheet" href="{% static '/trace_map/jquery-ui-1.13.2m/jquery-ui.min.css' %}" />
+
+    <style>
+        .ui-datepicker {
+            z-index: 1000 !important;
+        }
+
+        .set-parking-type-button {
+            border: 1px solid #79aec8;
+            padding: 5px 7px;
+            line-height: 15px;
+            vertical-align: middle;
+            display: inline-block;
+            font-weight: 400;
+        }
+
+        .set-parking-type-button[disabled] {
+            opacity: 0.4;
+        }
+
+        #ajax-request-result {
+            border: 1px solid #a2a2a2;
+            min-height: 20px;
+            margin: 10px auto;
+        }
+    </style>
+
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+        integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+        crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+        integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+        crossorigin=""></script>
+
+    <script src="{% static '/trace_map/js/leaflet-providers.js' %}"></script>
+    <script src="{% static '/trace_map/js/leaflet-okodrive-map.js' %}?v={% now 'U' %}"></script>
+</head>
+
+<body>
+    <div id="container">
+        <div id="header">
+            <div id="branding">
+
+                <h1 id="site-name"><a href="/admin/">Администрирование Django</a></h1>
+
+            </div>
+        </div>
+
+        <div id="main" class="main">
+            <div id="content" style="width: 100%">
+
+                <h1>Карта</h1>
+
+                <div id="content-main">
+                    <div>
+                        <fieldset class="module aligned ">
+                            <div class="form-row field-current_utc">
+                                <div>
+                                    <label class="required" for="choose-device">Выберите устройство:</label>
+
+                                    <select id="choose-device" name="device_id">
+                                        <option value="">Выберите устройство</option>
+                                        {% for device in devices %}
+                                        <option value="{% url 'trace_map_device_history' device_id=device %}">{{ device }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div>
+                        <form id="parking_session_filter">
+                            <fieldset class="module aligned ">
+
+                                <div class="form-row field-is_main">
+                                    <div class="checkbox-row">
+                                        <label class="required" for="">Парковки:</label>
+
+                                        {% for status in parking_statuses %}
+                                        <input class="show-parking-sessions parking_session_filter" type="checkbox"
+                                            name="status[]" id="id_status_{{ forloop.counter }}" value="{{ status }}"><label
+                                            class="vCheckboxLabel" for="id_status_{{ forloop.counter }}">
+                                            {{ status }}</label>
+                                        {% endfor %}
+
+                                    </div>
+                                </div>
+
+                                <div class="form-row field-is_main">
+                                    <div class="checkbox-row">
+                                        <label class="required" for="field-parking-session-date-start-from">Дата
+                                            парковочной
+                                            сессии:</label>
+
+                                        <input type="text" name="date_start_from"
+                                            class="datepicker parking_session_filter"
+                                            id="field-parking-session-date-start-from" autocomplete="off">
+
+                                        <input type="text" name="date_start_to"
+                                            class="datepicker parking_session_filter"
+                                            id="field-parking-session-date-start-to" autocomplete="off">
+                                    </div>
+                                </div>
+
+                                <div class="form-row field-is_main">
+                                    <div class="checkbox-row">
+                                        <label class="required"
+                                            for="field-parking-session-date-start">Комментарий:</label>
+
+                                        <input type="text" name="history_comment" class="parking_session_filter"
+                                            id="field-parking-session-history_comment" autocomplete="off">
+                                    </div>
+                                </div>
+
+                            </fieldset>
+
+                            <div class="submit-row">
+                                <img id="filter-form-loader-indicator"
+                                    src="{% static '/trace_map/img/circle_loading.gif' %}"
+                                    style="display:none;width: 31px; ">
+                                <input type="submit" value="Найти" class="default" name="find">
+                            </div>
+                        </form>
+                    </div>
+
+                    <div id="ajax-request-result"></div>
+
+                    <div class="app-android_api module">
+                        <div class="chart" style="height: 550px;">
+                            <div id="map" style="height: 550px;"></div>
+                        </div>
+                        Слои:
+
+                        <div class="custom-control custom-checkbox mb-3">
+                            <input class="custom-control-input draw-layer" id="checkbox-0" type="checkbox"
+                                data-layer="parkings">
+                            <label class="custom-control-label" for="checkbox-0">Парковки</label>
+                        </div>
+
+                        {% cycle "red" "blue" %}
+                        {% comment "Optional note" %}
+                        @foreach([0,1,2,3,4] as $part)
+                            <div class="custom-control custom-checkbox mb-3">
+                                <input class="custom-control-input draw-layer" id="checkbox-roads-{{ $part }}"
+                                    type="checkbox" data-layer="roads-{{ $part }}">
+                                <label class="custom-control-label" for="checkbox-roads-{{ $part }}">Дороги - часть
+                                    {{ $part }}</label>
+                            </div>
+                        @endforeach
+                        {% endcomment %}
+                        <div class="custom-control custom-checkbox mb-3">
+                            <input class="custom-control-input draw-1000-points" id="checkbox-2" type="checkbox">
+                            <label class="custom-control-label" for="checkbox-2">1000 случайных меток</label>
+                        </div>
+                    </div>
+                </div>
+
+                <br class="clear">
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        $(function () {
+
+            let okoDriveMap = new OkoDriveMap('map', {
+                parking_sessions_data_url: "{% url 'onec_api:parking_session' %}",
+                parking_sessions_max_size: 1500,
+                filter_form_loader_indicator_selector: '#filter-form-loader-indicator',
+                view: {
+                    lon: 37.61556,
+                    lat: 55.75222,
+                    scale: 10
+                }, //москва 37.61556, 55.75222
+                //view: {lat: 54.710162,lon: 20.510137,scale: 13}, //калининград 54.710162, 20.510137
+
+                icons: {
+                    route_green: {
+                        iconUrl: "{% static '/trace_map/img/route-icon-green.png' %}",
+                        iconRetinaUrl: "{% static '/trace_map/img/route-icon-green.png' %}",
+                        iconSize: [3, 3],
+                        iconAnchor: [2, 2],
+                        popupAnchor: [-3, -76],
+                        shadowUrl: "{% static '/trace_map/img/route-icon-shadow.png' %}",
+                        shadowRetinaUrl: "{% static '/trace_map/img/route-icon-shadow.png' %}",
+                        shadowSize: [3, 3],
+                        shadowAnchor: [2, 2]
+                    },
+                    route_red: {
+                        iconUrl: "{% static '/trace_map/img/route-icon-red.png' %}",
+                        iconRetinaUrl: "{% static '/trace_map/img/route-icon-red.png' %}",
+                        iconSize: [3, 3],
+                        iconAnchor: [2, 2],
+                        popupAnchor: [-3, -76],
+                        shadowUrl: "{% static '/trace_map/img/route-icon-shadow.png' %}",
+                        shadowRetinaUrl: "{% static '/trace_map/img/route-icon-shadow.png' %}",
+                        shadowSize: [3, 3],
+                        shadowAnchor: [2, 2]
+                    },
+                    parking_blue: {
+                        iconUrl: "{% static '/trace_map/img/parking-icon-blue.png' %}",
+                        iconRetinaUrl: "{% static '/trace_map/img/parking-icon-blue.png' %}",
+                        iconSize: [20, 26],
+                        iconAnchor: [10, 26],
+                        popupAnchor: [5, 0],
+                        shadowUrl: "{% static '/trace_map/img/parking-icon-shadow.png' %}",
+                        shadowRetinaUrl: "{% static '/trace_map/img/parking-icon-shadow.png' %}",
+                        shadowSize: [20, 11],
+                        shadowAnchor: [10, 8],
+                    }
+                }
+            });
+
+            $('body').on('change', '.draw-1000-points', function (ev) {
+                if ($(this).prop('checked')) {
+                    okoDriveMap.drawRandomPoints(1000);
+                } else {
+                    okoDriveMap.removeRandomPoints();
+                }
+            });
+
+            $('body').on('change', '.draw-layer', function (ev) {
+                if ($(this).prop('checked')) {
+                    okoDriveMap.loadLayer($(this).data('layer'));
+                } else {
+                    okoDriveMap.removeLayer($(this).data('layer'));
+                }
+            });
+
+            $('body').on('click', '#select-area', function (ev) {
+                okoDriveMap.startDrawingAnArea();
+            });
+
+            $('body').on('change', '#choose-device', function (ev) {
+                okoDriveMap.loadDeviceHistory($(this).val());
+            });
+
+            $('body').on('change', '#parking_session_filter input.parking_session_filter', function (ev) {
+                $('#parking_session_filter').trigger('submit');
+            });
+
+            let showParkingSessionsWithFilter = function (search_triggered_by_user) {
+                var serialized = $('#parking_session_filter').serializeArray();
+                var data = {};
+
+                $.map(serialized, function (n, i) {
+
+                    if (n['value'] == '') {
+                        return true;
+                    }
+
+                    //проверяем как надо отправлять данные -массивом или нет
+                    let regexp = /([a-z0-9]+)\[\]/i;
+                    var myArray = regexp.exec(n['name']);
+
+                    //что-то нашлось - значит это массив
+                    if (myArray) {
+                        let name = myArray[1];
+                        if (data[name] == undefined) {
+                            data[name] = [];
+                        }
+                        data[name].push(n['value']);
+                    } else {
+                        data[n['name']] = n['value'];
+                    }
+                });
+
+                if (search_triggered_by_user) {
+                    okoDriveMap.show_parking_sessions =
+                    true; //разрешаю вывод сессий, если раньше было запрещено
+                }
+
+                okoDriveMap.loadParkingsSessions(data);
+            }
+
+            $('body').on('submit', '#parking_session_filter', function (ev) {
+                ev.preventDefault();
+
+                showParkingSessionsWithFilter(true);
+            });
+
+            $('body').on('click', '.set-parking-type-button', function (ev) {
+                ev.preventDefault();
+
+                $('.set-parking-type-button').attr('disabled', true);
+                okoDriveMap.showAjaxLoader();
+                $('#ajax-request-result').html('');
+                $.post(
+                    "{% url 'set_parking_type' %}", {
+                        type: $(this).data('type'),
+                        uuid: $(this).data('uuid'),
+                        csrfmiddlewaretoken: '{{ csrf_token }}'
+                    },
+                    function (data, textStatus) {
+                        okoDriveMap.hideAjaxLoader();
+                        $('.set-parking-type-button').attr('disabled', false);
+
+                        
+
+                        for(var i in data.result) {
+                            $('#ajax-request-result').append('<div>'+ i +': '+ data.result[i] +'</div>');
+                        }
+                    },
+                    'json'
+                );
+            });
+
+            //при изменении зума или перемещении карты выполняю поиск сессий заново
+            okoDriveMap.map.on('moveend', function (e) {
+                if (okoDriveMap.show_parking_sessions) {
+                    showParkingSessionsWithFilter(false);
+                }
+            });
+
+            $('.datepicker').datepicker({
+                dateFormat: "dd.mm.yy"
+            });
+        });
+    </script>
+
+
+    <script src="{% static '/trace_map/jquery-ui-1.13.2m/jquery-ui.min.js' %}"></script>
+</body>
+
+</html>
