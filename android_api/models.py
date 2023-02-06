@@ -47,12 +47,18 @@ class Parametrs(models.Model):
 
 class Bearing(Parametrs):
 
+    def __str__(self):
+        return f'Bearing(id) {self.pk}'
+
     class Meta:
         verbose_name = 'Bearing'
         verbose_name_plural = 'Bearings'
 
 
 class Speed(Parametrs):
+
+    def __str__(self):
+        return f'Скорость(id) {self.pk}'
 
     class Meta:
         verbose_name = 'Speed'
@@ -64,14 +70,20 @@ class XY(models.Model):
     longitude = models.FloatField()
     accuracy = models.FloatField()
 
+    def __str__(self):
+        return f'Координаты(id) {self.pk}'
+
     class Meta:
         verbose_name = 'Coordinate'
         verbose_name_plural = 'Coordinates'
 
 
 class AllActivityMetrics(models.Model):
-    activity = models.CharField(max_length=25, choices=ActivityTypes.choices)
-    confidence = models.IntegerField()
+    activity = models.CharField(max_length=25, choices=ActivityTypes.choices, null=True)
+    confidence = models.IntegerField(null=True)
+
+    def __str__(self):
+        return f'Метрики активности(id) {self.pk}'
 
     class Meta:
         verbose_name = 'AllActivityMetric'
@@ -82,20 +94,24 @@ class Data(models.Model):
     bearing = models.OneToOneField(
         Bearing,
         on_delete=models.CASCADE,
+        null=True
     )
     speed = models.OneToOneField(
         Speed,
         on_delete=models.CASCADE,
+        null=True
     )
     xy = models.OneToOneField(
         XY,
         on_delete=models.CASCADE,
+        null=True
     )
     time = models.DateTimeField(auto_now_add=True)
-    activity = models.CharField(max_length=25)
-    all_activity_metrics = models.ManyToManyField(
-        AllActivityMetrics
-    )
+    activity = models.CharField(max_length=25, null=True)
+    all_activity_metrics = models.ManyToManyField(AllActivityMetrics, null=True)
+
+    def __str__(self):
+        return f'Информация(id) {self.pk}'
 
 
 class Device(models.Model):
@@ -110,7 +126,15 @@ class Device(models.Model):
         verbose_name_plural = 'Телеметрия устройств'
 
     def __str__(self):
-        return f'Устройство {self.device_id}'
+        return f'Устройство(id) {self.device_id}'
+
+
+class OkoDriveStatusActive(models.Model):
+    device_id = models.CharField(max_length=20, null=True)
+    activity_status = models.CharField(max_length=20)
+
+    def __str__(self):
+        return f'Статусы активности устройств {self.device_id}'
 
 
 class TimeStampSetting(models.Model):
@@ -163,7 +187,7 @@ class InVehicleOkoDriveSettings(models.Model):
     class Meta:
         verbose_name = 'Настройка для OkoDrive_status по Activity_type (IN_VEHICLE)'
         verbose_name_plural = 'Настройки для OkoDrive_status по Activity_type (IN_VEHICLE)'
-        ordering =['-activity_type']
+        ordering = ['-activity_type']
 
 
 class OnBicycleOkoDriveSettings(models.Model):

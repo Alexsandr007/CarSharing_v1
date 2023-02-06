@@ -11,7 +11,7 @@ from rangefilter.filters import DateRangeFilter, DateTimeRangeFilter, NumericRan
 from android_api.models import Device, TimeStampSetting, BaseOkoDriveSettings, InVehicleOkoDriveSettings, \
     UnknownOkoDriveSettings, StillOkoDriveSettings, SpeedIntervalSettings, CurrentUTCTime, OnBicycleOkoDriveSettings, \
     OnFootOkoDriveSettings, WalkingOkoDriveSettings, RunningOkoDriveSettings, TiltingOkoDriveSettings, Data, AllActivityMetrics, \
-    Bearing, Speed, XY
+    Bearing, Speed, XY, OkoDriveStatusActive
 from simple_history.admin import SimpleHistoryAdmin
 
 
@@ -21,6 +21,7 @@ admin.site.register(Speed)
 admin.site.register(Bearing)
 admin.site.register(Data)
 admin.site.register(AllActivityMetrics)
+admin.site.register(OkoDriveStatusActive)
 
 
 @admin.register(TimeStampSetting)

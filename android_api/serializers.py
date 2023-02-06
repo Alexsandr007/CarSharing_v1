@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from android_api.models import TimeStampSetting, Device, Bearing, Speed, XY, AllActivityMetrics
+from android_api.models import TimeStampSetting, Device, Bearing, Speed, XY, AllActivityMetrics, Data
 
 
 class BearingSerializer(serializers.Serializer):

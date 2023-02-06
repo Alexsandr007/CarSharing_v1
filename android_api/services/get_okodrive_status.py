@@ -37,6 +37,7 @@ def is_equal_speed_interval(current_speed, previous_speed, intervals):
 
 
 def get_oko_drive_statuses(model, activity_type):
+    print(activity_type)
     oko_drive_statuses = (
         model.objects
         .values_list(
@@ -75,6 +76,7 @@ def get_okodrive_status(activity_type: str, speed: float, **kwargs) -> str:
     if not model_oko_drive_settings:
         print(1)
         print(model_oko_drive_settings)
+        print(activity_type)
         base_oko_drive_statuses = get_oko_drive_statuses(BaseOkoDriveSettings, activity_type)
         return base_oko_drive_statuses[status_index]
 
@@ -93,9 +95,8 @@ def get_okodrive_status(activity_type: str, speed: float, **kwargs) -> str:
     if past_device_activity_type == activity_type and model_oko_drive_settings == StillOkoDriveSettings:
         print(4)
         last_device_history_of_first_interval = Device.objects.filter(
-            device_id=kwargs.get('device_id'),
-            speed=0
-        ).first()
+            device_id=kwargs.get('device_id')).first()
+        print(last_device_history_of_first_interval.data.speed.value)
         if last_device_history_of_first_interval and speed == 0:
             return last_device_history_of_first_interval.data.activity
         else:
