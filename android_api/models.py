@@ -129,6 +129,31 @@ class Device(models.Model):
         return f'Устройство(id) {self.device_id}'
 
 
+class DeviceHistory(models.Model):
+    device_id = models.IntegerField()
+    longitude = models.FloatField()
+    latitude = models.FloatField()
+    activity_type = models.CharField(max_length=25, choices=ActivityTypes.choices)
+    okodrive_status = models.CharField(
+        max_length=25,
+        blank=True,
+        choices=OkoDriveStatuses.choices,
+        default=OkoDriveStatuses.ignore)
+    speed = models.FloatField()
+    bearing = models.FloatField()
+    history = HistoricalRecords()
+    time = models.DateTimeField(auto_now_add=True)
+    all_activity_metrics = models.CharField(max_length=25, null=True)
+
+    class Meta:
+        verbose_name = 'История устройства'
+        verbose_name_plural = 'История устройств'
+        ordering = ['-time']
+
+    def __str__(self):
+        return f'Устройство {self.device_id}'
+
+
 class OkoDriveStatusActive(models.Model):
     device_id = models.CharField(max_length=20, null=True)
     activity_status = models.CharField(max_length=20)

@@ -11,8 +11,26 @@ from rangefilter.filters import DateRangeFilter, DateTimeRangeFilter, NumericRan
 from android_api.models import Device, TimeStampSetting, BaseOkoDriveSettings, InVehicleOkoDriveSettings, \
     UnknownOkoDriveSettings, StillOkoDriveSettings, SpeedIntervalSettings, CurrentUTCTime, OnBicycleOkoDriveSettings, \
     OnFootOkoDriveSettings, WalkingOkoDriveSettings, RunningOkoDriveSettings, TiltingOkoDriveSettings, Data, AllActivityMetrics, \
-    Bearing, Speed, XY, OkoDriveStatusActive
+    Bearing, Speed, XY, OkoDriveStatusActive, DeviceHistory
 from simple_history.admin import SimpleHistoryAdmin
+
+
+class WebsiteHistoryAdmin(SimpleHistoryAdmin):
+    history_list_display = [
+        'longitude',
+        'latitude',
+        'activity_type',
+        'okodrive_status',
+        'speed',
+    ]
+    list_filter = ('time',)
+    list_display = ['device_id', '__str__']
+    search_fields = ['time']
+    list_per_page = 500
+
+    def yandex_location_url(self, obj):
+        return format_html("<a href='{url}'>{url}</a>", url=obj.yandex_link)
+    yandex_location_url.allow_tags = True
 
 
 admin.site.register(Device)
@@ -22,6 +40,7 @@ admin.site.register(Bearing)
 admin.site.register(Data)
 admin.site.register(AllActivityMetrics)
 admin.site.register(OkoDriveStatusActive)
+admin.site.register(DeviceHistory, WebsiteHistoryAdmin)
 
 
 @admin.register(TimeStampSetting)
