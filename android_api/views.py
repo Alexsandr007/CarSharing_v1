@@ -30,7 +30,6 @@ class DeviceViewSet(ModelViewSet):
                     serializer.validated_data['data']['activity'],
                     serializer.validated_data['data']['speed']['value'],
                     device_id=serializer.validated_data['device_id'],
-                    activity=serializer.validated_data['data']['activity'],
                 )
         # generate_id = gen_smth(3)
         generate_id = serializer.validated_data['device_id']
@@ -49,20 +48,28 @@ class DeviceViewSet(ModelViewSet):
             data.bearing = bearing
             data.speed = speed
             data.xy = xy
+            # time, activity
+            unix_timestamp = int(time.time())
+            data.time = unix_converter(unix_timestamp)
             data.activity = serializer.validated_data['data']['activity']
             data.save()
             k = 0
+            all_activity = ''
             for i in serializer.validated_data['data']['all_activity_metrics']:
                 k += 1
                 all_activity_metrics = AllActivityMetrics(activity=i['activity'], confidence=i['confidence'])
                 all_activity_metrics.save()
                 data.all_activity_metrics.add(all_activity_metrics)
-                if k == 2 and int(i['confidence']) > 0:
-                    all_activity = i['activity']
+                if int(i['confidence']) > 0:
+                    all_activity += i['activity']
+                    all_activity += f"({i['confidence']}),"
+                    print("all_activity"+all_activity)
                 else:
-                    all_activity = ''
+                    all_activity += ''
             data.save()
-
+            unix_timestamp = int(time.time())
+            print(unix_timestamp)
+            print(time.time())
             device_history = DeviceHistory.objects.create(
                 device_id=generate_id,
                 longitude=float(serializer.validated_data['data']['xy']['longitude']),
@@ -71,11 +78,11 @@ class DeviceViewSet(ModelViewSet):
                 okodrive_status=okodrive_status,
                 speed=serializer.validated_data['data']['speed']['value'],
                 bearing=serializer.validated_data['data']['bearing']['value'],
+                time=unix_converter(unix_timestamp),
+                yandex_link=f"https://yandex.ru/maps/?pt={serializer.validated_data['data']['xy']['longitude']},{serializer.validated_data['data']['xy']['latitude']}&z=18&l=map",
                 all_activity_metrics=all_activity
             )
             device_history.save()
-
-
             print(serializer.validated_data['device_id'])
             print(okodrive_status)
             oko_drive_status_active = OkoDriveStatusActive(device_id=generate_id, activity_status=okodrive_status)
@@ -90,11 +97,7 @@ class DeviceViewSet(ModelViewSet):
             device_id=serializer.validated_data['device_id'],
         )
         if serializer.validated_data['data']['xy']['longitude'] and serializer.validated_data['data']['xy']['latitude']:
-
-            # speed
-
-            # xy
-
+            unix_timestamp = int(time.time())
 
             device = Device.objects.get(device_id=serializer.validated_data['device_id'])
             data = Data.objects.get(id=device.data.pk)
@@ -121,29 +124,33 @@ class DeviceViewSet(ModelViewSet):
             device.data.xy.latitude = serializer.validated_data['data']['xy']['latitude']
             device.data.xy.longitude = serializer.validated_data['data']['xy']['longitude']
             device.data.xy.accuracy = serializer.validated_data['data']['xy']['accuracy']
-
+            # time, activity
+            device.data.time = unix_converter(unix_timestamp)
+            device.data.activity = serializer.validated_data['data']['activity']
             device.data.activity = serializer.validated_data['data']['activity']
             device.data.all_activity_metrics.clear()
             data.activity = serializer.validated_data['data']['activity']
             data.all_activity_metrics.clear()
+            k = 0
+            all_activity = ' '
             for i in serializer.validated_data['data']['all_activity_metrics']:
+                k += 1
                 all_activity_metrics = AllActivityMetrics(activity=i['activity'], confidence=i['confidence'])
                 all_activity_metrics.save()
                 data.all_activity_metrics.add(all_activity_metrics)
-                all_activity_metrics = AllActivityMetrics(activity=i['activity'], confidence=i['confidence'])
-                all_activity_metrics.save()
                 device.data.all_activity_metrics.add(all_activity_metrics)
+                if int(i['confidence']) > 0:
+                    all_activity += i['activity']
+                    all_activity += f"({i['confidence']}),"
+                    print("all_activity" + all_activity)
+                else:
+                    all_activity += ''
             data.save()
             device.save()
             oko_drive_status_active = OkoDriveStatusActive.objects.get(
                 device_id=serializer.validated_data['device_id'])
             oko_drive_status_active.activity_status = okodrive_status
             oko_drive_status_active.save()
-            k = 0
-            if k == 2 and int(i['confidence']) > 0:
-                all_activity = i['activity']
-            else:
-                all_activity = ''
             print(serializer.validated_data['data']['xy']['longitude'])
             device_history = DeviceHistory.objects.get(device_id=serializer.validated_data['device_id'])
             device_history.longitude = float(serializer.validated_data['data']['xy']['longitude'])
@@ -153,6 +160,8 @@ class DeviceViewSet(ModelViewSet):
             device_history.speed = serializer.validated_data['data']['speed']['value']
             device_history.bearing = serializer.validated_data['data']['bearing']['value']
             device_history.all_activity_metrics = all_activity
+            device_history.yandex_link = f"https://yandex.ru/maps/?pt={serializer.validated_data['data']['xy']['longitude']},{serializer.validated_data['data']['xy']['latitude']}&z=18&l=map"
+            device_history.time = unix_converter(unix_timestamp)
             device_history.save()
             print(device_history.history.all())
             serializer.save(device_id=serializer.validated_data['device_id'], data=device.data)

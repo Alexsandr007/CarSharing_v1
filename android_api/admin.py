@@ -17,21 +17,35 @@ from simple_history.admin import SimpleHistoryAdmin
 
 class WebsiteHistoryAdmin(SimpleHistoryAdmin):
     history_list_display = [
+        'last_edited_custom_utc',
+        'yandex_link',
         'longitude',
         'latitude',
         'activity_type',
         'okodrive_status',
         'speed',
+        'all_activity_metrics',
     ]
-    list_filter = ('time',)
-    list_display = ['device_id', '__str__']
-    search_fields = ['time']
+    list_display = ['device_id', '__str__', 'last_edited_custom_utc', 'yandex_link_base', 'activity_type', 'okodrive_status', 'speed',
+                    'longitude', 'latitude', 'all_activity_metrics']
+
+    list_filter = ('time', 'device_id', 'speed', 'activity_type', 'okodrive_status',)
+    search_fields = ['time', 'device_id']
     list_per_page = 500
 
-    def yandex_location_url(self, obj):
+    def yandex_link(self, obj):
         return format_html("<a href='{url}'>{url}</a>", url=obj.yandex_link)
-    yandex_location_url.allow_tags = True
+    yandex_link.allow_tags = True
 
+    def yandex_link_base(self, obj):
+        return format_html("<a href='{url}'>{url}</a>", url=obj.yandex_link)
+    yandex_link_base.allow_tags = True
+
+    def last_edited_custom_utc(self, obj):
+        return obj.last_edited_custom_utc()
+
+
+admin.site.register(DeviceHistory, WebsiteHistoryAdmin)
 
 admin.site.register(Device)
 admin.site.register(XY)
@@ -40,7 +54,7 @@ admin.site.register(Bearing)
 admin.site.register(Data)
 admin.site.register(AllActivityMetrics)
 admin.site.register(OkoDriveStatusActive)
-admin.site.register(DeviceHistory, WebsiteHistoryAdmin)
+
 
 
 @admin.register(TimeStampSetting)

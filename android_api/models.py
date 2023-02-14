@@ -4,7 +4,6 @@ from simple_history.models import HistoricalRecords
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 import datetime
-from android_api.services.generating_interval_values_dict import get_interval_values_dict
 
 
 class OkoDriveStatuses(models.TextChoices):
@@ -106,12 +105,21 @@ class Data(models.Model):
         on_delete=models.CASCADE,
         null=True
     )
-    time = models.DateTimeField(auto_now_add=True)
+    time = models.CharField(max_length=625, blank=True, verbose_name='Last message')
+    custom_utc = models.DateTimeField(auto_now=True)
     activity = models.CharField(max_length=25, null=True)
     all_activity_metrics = models.ManyToManyField(AllActivityMetrics, null=True)
 
     def __str__(self):
         return f'Информация(id) {self.pk}'
+
+    def last_edited_custom_utc(self):
+        utc_settings = CurrentUTCTime.objects.filter(is_main=True).first()
+        utc_sign = utc_settings.current_utc[0]
+        utc_num = int(utc_settings.current_utc[1])
+        last_edited_time = self.custom_utc
+        return (last_edited_time - datetime.timedelta(hours=utc_num)).strftime('%Y-%m-%d %H:%M:%S') if utc_sign == '-' \
+            else (last_edited_time + datetime.timedelta(hours=utc_num)).strftime('%Y-%m-%d %H:%M:%S')
 
 
 class Device(models.Model):
@@ -129,6 +137,21 @@ class Device(models.Model):
         return f'Устройство(id) {self.device_id}'
 
 
+class CustomUtcHistoricalModel(models.Model):
+
+    custom_utc_history = models.DateTimeField(auto_now=True, null=True)
+    def last_edited_custom_utc(self):
+        utc_settings = CurrentUTCTime.objects.filter(is_main=True).first()
+        utc_sign = utc_settings.current_utc[0]
+        utc_num = int(utc_settings.current_utc[1])
+        last_edited_time = self.custom_utc_history
+        return (last_edited_time - datetime.timedelta(hours=utc_num)).strftime('%Y-%m-%d %H:%M:%S') if utc_sign == '-' \
+            else (last_edited_time + datetime.timedelta(hours=utc_num)).strftime('%Y-%m-%d %H:%M:%S')
+
+    class Meta:
+        abstract = True
+
+
 class DeviceHistory(models.Model):
     device_id = models.IntegerField()
     longitude = models.FloatField()
@@ -139,11 +162,13 @@ class DeviceHistory(models.Model):
         blank=True,
         choices=OkoDriveStatuses.choices,
         default=OkoDriveStatuses.ignore)
-    speed = models.FloatField()
+    speed = models.DecimalField(max_digits=5, decimal_places=2)
     bearing = models.FloatField()
-    history = HistoricalRecords()
-    time = models.DateTimeField(auto_now_add=True)
-    all_activity_metrics = models.CharField(max_length=25, null=True)
+    history = HistoricalRecords(bases=[CustomUtcHistoricalModel, ])
+    time = models.CharField(max_length=625, blank=True, verbose_name='Last message')
+    all_activity_metrics = models.CharField(max_length=100, null=True)
+    yandex_link = models.CharField(max_length=625, blank=True, null=True)
+    custom_utc = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         verbose_name = 'История устройства'
@@ -152,6 +177,16 @@ class DeviceHistory(models.Model):
 
     def __str__(self):
         return f'Устройство {self.device_id}'
+
+    def last_edited_custom_utc(self):
+        utc_settings = CurrentUTCTime.objects.filter(is_main=True).first()
+        utc_sign = utc_settings.current_utc[0]
+        utc_num = int(utc_settings.current_utc[1])
+        last_edited_time = self.custom_utc
+        return (last_edited_time - datetime.timedelta(hours=utc_num)).strftime('%Y-%m-%d %H:%M:%S') if utc_sign == '-' \
+            else (last_edited_time + datetime.timedelta(hours=utc_num)).strftime('%Y-%m-%d %H:%M:%S')
+
+
 
 
 class OkoDriveStatusActive(models.Model):
